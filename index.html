@@ -11,5 +11,9 @@ b:"/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/w
 },// Redir
 p=new URLSearchParams(location.search),k=Object.keys(r).find(x=>p.has(x));
 if(k){p.delete(k);let s=p.toString();window.location.assign(r[k]+(s?(r[k].includes("?")?"&":"?")+s:""))}
-else document.body.innerHTML=`<table border="0"><tr><td colspan=5><a href="https://gormb.github.io/_"><img src=_.png height=200><br>gormb.github.io/_</a></td><td colspan=100><h1>gormb</h1></td></tr>`+Object.keys(r).map(x=>`<td><br><a href="?${x}"><img src=${x}.png height=100><br>${x}</a>`).join("</td><td></td><td>")+"</td></tr></table>";
+else document.body.innerHTML=`<table border="0">
+    <tr><td colspan=5><a href="https://gormb.github.io/_">
+    <img src="_.png" height=200><br>gormb.github.io/_</a></td><td colspan=100><h1>gormb _</h1></td></tr>`
+        +Object.keys(r).map(x=>`<td><br><a href="?${x}"><img src="${x}.png" height="100"><br>${x}</a>`).join("</td><td>&nbsp;</td><td>")
+        +"</td></tr></table>";
 </script></body></html>
