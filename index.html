@@ -4,12 +4,11 @@ b:"/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/w
 ,ldd:"/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book?book=LifeDemandedDeath.pdf"
 ,chat:"/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/EnHaandAaHoldeI/index.html"
 ,ckat:"/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/EnHaandAaHoldeI/indexkatalog.html"
-,ln:"http://linkedin.com/in/gorm1"
+,ln:"https://linkedin.com/in/gorm1"
 ,ed:"https://github.com/gormb/_/edit/main/index.html"
 
 },// Redir
 p=new URLSearchParams(location.search),k=Object.keys(r).find(x=>p.has(x));
-if(k){p.delete(k);location.replace(r[k]+(p.size?(r[k].includes("?")?"&":"?")+p:""))}
+if(k){p.delete(k);let s=p.toString();setTimeout(()=>location.replace(r[k]+(s?(r[k].includes("?")?"&":"?")+s:"")),0)}
 else document.body.innerHTML=`<h1>gormb</h1>`+Object.keys(r).map(x=>`<a href="?${x}">${x}</a>`).join("<br>");
-
 </script></body></html>
