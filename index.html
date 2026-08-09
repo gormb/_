@@ -1,15 +1,13 @@
-<!doctype html>
-<html>
-<body><script>
-const b="/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book";
-switch (location.search) {
-    case "?d":   location.replace(b); break;
-    case "?ldd": location.replace(b+"?book=LifeDemandedDeath.pdf"); break;
-    default:
-        document.body.innerHTML =
-            '<a href="?d">Book</a><br>' +
-            '<a href="?ldd">Life Demanded Death</a>';
+<!doctype html><html><body><script>
+const r = [
+    ["d",   "/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book"],
+    ["ldd", "/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book?book=LifeDemandedDeath.pdf"]
+];
+let p=new URLSearchParams(location.search), key=p.keys().next().value, x= r.find(([t])=>t==key);
+if (x) {
+    p.delete(key);
+    let q = p.toString();
+    location.replace(x[1] + (q?(x[1].includes("?")?"&":"?")+q:""));
 }
-</script>
-</body>
-</html>
+else document.body.innerHTML=r.map(([t])=>`<a href="?${t}">${t}</a>`).join("");
+</script></body></html>
