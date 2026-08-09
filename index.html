@@ -10,7 +10,12 @@ b:"/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/w
 
 },// Redir
 p=new URLSearchParams(location.search),k=Object.keys(r).find(x=>p.has(x));
-if(k){p.delete(k);let s=p.toString();window.location.assign(r[k]+(s?(r[k].includes("?")?"&":"?")+s:""))}
+if(k){
+  p.delete(k); 
+  let s=p.toString();
+  let dest = r[k] + (s ? (r[k].includes("?") ? "&" : "?") + s : "");
+  window.location.assign(dest);
+}
 else document.body.innerHTML=`<table border="0">
     <tr><td colspan=6><a href="https://gormb.github.io/_">
     <img src="png.png" height=200><br>gormb.github.io/_</a></td><td colspan=100><h1>Gorm Braarvig</h1></td></tr>`
