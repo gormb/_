@@ -1,8 +1,9 @@
 <!doctype html><html><body><script>
-const r = [
-["b",   "/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book"],
-["ldd", "/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book?book=LifeDemandedDeath.pdf"]
-];
-if(x) { p.delete(x[0]);location.replace(x[1]+(p.size?(x[1].includes("?")?"&":"?")+p:""));} 
-else document.body.innerHTML=r.map(([t])=>`<a href="?${t}">${t}</a>`).join("");
+
+let p=new URLSearchParams(location.search),x=r.find(([t])=>t==p.keys().next().value);
+if(x){
+ p.delete(x[0]);
+ location.replace(x[1]+(p.size?(x[1].includes("?")?"&":"?")+p:""));
+}else document.body.innerHTML=r.map(([t])=>`<a href="?${t}">${t}</a>`).join("");
+
 </script></body></html>
