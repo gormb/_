@@ -9,5 +9,5 @@ if (x) {
     let q = p.toString();
     location.replace(x[1] + (q?(x[1].includes("?")?"&":"?")+q:""));
 }
-else document.body.innerHTML=r.map(([t])=>`<a href="?${t}">${t}</a>`).join("");
+else document.body.innerHTML=r.map(([t])=>`<a href="?${t}">${t}</a>`).join("<br>");
 </script></body></html>
