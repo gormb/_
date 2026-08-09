@@ -1,6 +1,8 @@
 <!doctype html><html><body><script>
-
-let p=new URLSearchParams(location.search),x=r.find(([t])=>t==p.keys().next().value);
+let r=[
+    ["d",   "/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book"],
+    ["ldd", "/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book?book=LifeDemandedDeath.pdf"]
+],p=new URLSearchParams(location.search),x=r.find(([t])=>t==p.keys().next().value);
 if(x){
  p.delete(x[0]);
  location.replace(x[1]+(p.size?(x[1].includes("?")?"&":"?")+p:""));
