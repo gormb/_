@@ -1,11 +1,13 @@
-<!doctype html><html><body><script>
-let r=[
-    ["d",   "/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book"],
-    ["ldd", "/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book?book=LifeDemandedDeath.pdf"]
-],p=new URLSearchParams(location.search),x=r.find(([t])=>t==p.keys().next().value);
-if(x){
- p.delete(x[0]);
- location.replace(x[1]+(p.size?(x[1].includes("?")?"&":"?")+p:""));
-}else document.body.innerHTML=r.map(([t])=>`<a href="?${t}">${t}</a>`).join("");
+<!doctype html><html><body><script>let r={
+
+b:"/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book"
+,ldd:"/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book?book=LifeDemandedDeath.pdf"
+,chat:"/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/"
+,ed:"https://github.com/gormb/_/edit/main/index.html"
+
+},// Redir
+p=new URLSearchParams(location.search),k=Object.keys(r).find(x=>p.has(x));
+if(k){p.delete(k);location.replace(r[k]+(p.size?(r[k].includes("?")?"&":"?")+p:""))}
+else document.body.innerHTML=`<h1>gormb</h1>`+Object.keys(r).map(x=>`<a href="?${x}">${x}</a>`).join("<br>");
 
 </script></body></html>
