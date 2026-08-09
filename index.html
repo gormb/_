@@ -10,5 +10,5 @@ b:"/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/w
 },// Redir
 p=new URLSearchParams(location.search),k=Object.keys(r).find(x=>p.has(x));
 if(k){p.delete(k);let s=p.toString();setTimeout(()=>location.replace(r[k]+(s?(r[k].includes("?")?"&":"?")+s:"")),0)}
-else document.body.innerHTML=`<h1>gormb</h1>`+Object.keys(r).map(x=>`<a href="?${x}">${x}</a>`).join("<br>");
+else document.body.innerHTML=`<h1>gormb</h1>`+Object.keys(r).map(x=>`<a href="?${x}">${x}</a>`).join("<br>")+"<hr>";
 </script></body></html>
