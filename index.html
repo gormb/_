@@ -1,13 +1,8 @@
 <!doctype html><html><body><script>
 const r = [
-    ["d",   "/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book"],
-    ["ldd", "/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book?book=LifeDemandedDeath.pdf"]
+["b",   "/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book"],
+["ldd", "/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book?book=LifeDemandedDeath.pdf"]
 ];
-let p=new URLSearchParams(location.search), key=p.keys().next().value, x= r.find(([t])=>t==key);
-if (x) {
-    p.delete(key);
-    let q = p.toString();
-    location.replace(x[1] + (q?(x[1].includes("?")?"&":"?")+q:""));
-}
-else document.body.innerHTML=r.map(([t])=>`<a href="?${t}">${t}</a>`).join("<br>");
+if(x) { p.delete(x[0]);location.replace(x[1]+(p.size?(x[1].includes("?")?"&":"?")+p:""));} 
+else document.body.innerHTML=r.map(([t])=>`<a href="?${t}">${t}</a>`).join("");
 </script></body></html>
