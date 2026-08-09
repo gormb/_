@@ -1,0 +1,15 @@
+<!doctype html>
+<html>
+<body><script>
+const b="/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book";
+switch (location.search) {
+    case "?d":   location.replace(b); break;
+    case "?ldd": location.replace(b+"?book=LifeDemandedDeath.pdf"); break;
+    default:
+        document.body.innerHTML =
+            '<a href="?d">Book</a><br>' +
+            '<a href="?ldd">Life Demanded Death</a>';
+}
+</script>
+</body>
+</html>
