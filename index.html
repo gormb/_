@@ -1,11 +1,38 @@
-<!doctype html><html><body><script>let r={
+<!doctype html><html><head><style>img{padding-right:4vw}</style></head><body><script>
+const nt=h=>`</td></tr></table><h2>${h}</h2><table><tr><td>`, l=`</td></tr><tr><td>`
+, r={z0:nt("Work")
 
-b:"/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book/LdD.html"
-,ldd:"/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book/LdD.html?book=LifeDemandedDeath.pdf"
 ,chat:"/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/EnHaandAaHoldeI/index.html"
 ,ckat:"/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/EnHaandAaHoldeI/indexkatalog.html"
 ,ln:"https://linkedin.com/in/gorm1"
 ,nl:"https://www.linkedin.com/newsletters/tirsdagsarkitekt-ser-p%C3%A5-ai-ki-7429157121755136000/"
+,z1:nt("Book")
+,b:"/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book/LdD.html"
+,ldd:"/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/wwwroot/Book/LdD.html?book=LifeDemandedDeath.pdf"
+,_1:l, mod:"https://open.spotify.com/track/4aFC7Mes7CW5vHcb8ZApAx?si=32b9979d80a54b72"
+  ,msoe:"https://open.spotify.com/track/59OfdsB1B6KuCa82mWbjBJ?si=946f08e2b39b4d9b"
+  ,mbtr:"https://open.spotify.com/track/6hTcuIQa0sxrrByu9wTD7s?si=dc1e8b8900a74390"
+  ,mlw:"https://open.spotify.com/track/2YfEtTDwE9KknYUS94grcg?si=a6c6609a19ec4761"
+,_2:l, myllr:"https://open.spotify.com/track/2YfEtTDwE9KknYUS94grcg?si=a6c6609a19ec4761"
+  ,mgsr:"https://open.spotify.com/track/5cbI0HJrTDb0njDk653bcN?si=512be98ca7fa4ab9"
+  ,mslg:"https://open.spotify.com/track/28mP2vfW3oGYmxE0slVqia?si=4cb710b366bc4737"
+  ,mwdoa:"https://open.spotify.com/track/3oGSdQ57PgwROsNVg6RRcn?si=3a57ac4209a24b54"
+,_3:l,msd:"https://open.spotify.com/track/73eSPHYBvrzSeOPzCfHW51?si=34b3491b2f264781"
+  ,mttd:"https://open.spotify.com/track/4JTy05wXvZkYOYXa9oMCuY?si=ff99065290224a55"
+  ,moym:"https://open.spotify.com/track/2S1rIobRdiid5m2i8MdbrQ?si=1f8f44f9ec044b1d"
+  ,mpy:"https://open.spotify.com/track/1FS21kclHQ2vVi3U1ZxETc?si=a74b8ee4537f4820"
+,_4:l,maam:"https://open.spotify.com/track/62SRcHI07VTSCbzG4WLfj2?si=589d1efaa838423a"
+  ,mwctbl:"https://open.spotify.com/track/0TaT50ZZxT4ytZxuqkE3A9?si=0efd77f06d58490b"
+  ,metiirp:"https://open.spotify.com/track/2kRFrWaLWiKq48YYVdGcm8?si=e7007a3c45b64ddc"
+  ,mm:"https://open.spotify.com/track/7fLzbEOBOae9lUnOwr7Tse?si=f55a2d11daa4475f"
+,_5:l,mct:"https://open.spotify.com/track/5srgpROEtK8KLKQl5FW7Ub?si=d05ff417d36f43ac"
+  ,mniws:"https://open.spotify.com/track/6L5BZEcZmD6RBJnimzlyKr?si=d371245a07e2403e"
+  ,msh:"https://open.spotify.com/track/2f0P7iELCvAlV8j6Z3rGDE?si=3b5d9d50e913427e"
+  ,mpj:"https://open.spotify.com/track/2wUlYDGGXlSvm2NkGj0Qio?si=4bb5f695465c45a2"
+,_6:l,mcb:"https://open.spotify.com/track/2d7139N7CJ9eJmGVE42Y44?si=485876e5ed3d4021"
+  ,mlll:"https://open.spotify.com/track/4uYwlMp841PLJmj1gJJwIq?si=1eaaf9c0a4fc4049"
+  ,mntfl:"https://open.spotify.com/track/30cjLreSF4Xq0uAB89i2Ac?si=aa4a89853c6f41cb"
+,z2:nt("This list")
 ,ed:"https://github.com/gormb/_/edit/main/index.html"
 
 },// Redir
@@ -19,6 +46,9 @@ if(k){
 else document.body.innerHTML=`<table border="0">
     <tr><td colspan=6><a href="https://gormb.github.io/_">
     <img src="png.png" height=200><br>gormb.github.io/_</a></td><td colspan=100><h1>Gorm Braarvig</h1></td></tr>`
-        +Object.keys(r).map(x=>`<td><br><a href="?${x}"><img src="${x}.png" height="100"><br>${x}</a>`).join("</td><td>&nbsp;</td><td>")
+        +Object.keys(r).map(x=>r[x].startsWith("<")
+          ?`${r[x]}`
+          :`<td><br><a href="?${x}"><img src="${x}.png" style="width:18vw"><br>${x}</a>`)
+          .join("</td><td>")
         +"</td></tr></table>";
 </script></body></html>
