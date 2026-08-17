@@ -1,0 +1,27 @@
+<!doctype html><html lang=no><head><meta charset=utf-8><title>Legg til sanger</title>
+<script src=db.js></script>
+<style>body{font-family:system-ui;max-width:64rem;margin:auto;padding:1rem}button{font-size:1rem;padding:.5rem 1rem}</style>
+</head><body><h2>Legg til alle sanger</h2>
+<p id=status></p><p id=count></p>
+<button id=go>Legg til alle i databasen</button>
+<script>
+// Ingen statiske data: sanglisten hentes dynamisk fra redirect-tabellen
+// (r-objektet på https://gormb.github.io/_/ = ?m-kode -> spotify-url).
+const SRC='https://gormb.github.io/_/'
+const ready=!SUPABASE.url.includes('YOUR-'),$=id=>document.getElementById(id)
+$('status').textContent=ready?'✅ Konfigurert':'⚠️ Konfigurer <b>db.js</b> først'
+(async()=>{
+  const songs={}
+  try{
+    const html=await(await fetch(SRC)).text()
+    const script=html.match(/<script>([\s\S]*?)<\/script>/)?.[1]||''
+    const re=/(^|[,{]\s*)m([a-z0-9]+)\s*:\s*"((?:[^"\\]|\\.)*)"/g
+    let m;while(m=re.exec(script))if(!m[2].endsWith('qr'))songs['m'+m[2]]=m[3]
+  }catch(e){$('status').innerHTML='⚠️ Kunne ikke hente sanger ('+e.message+')'}
+  const n=Object.keys(songs).length
+  $('count').textContent=n+' sanger (m*, ikke *qr) – hentet fra '+SRC
+  $('go').disabled=!ready||!n
+  $('go').onclick=()=>location.href='dbAdm.html?add='+encodeURIComponent(JSON.stringify(songs))
+})()
+</script>
+</body></html>
