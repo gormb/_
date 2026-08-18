@@ -3,8 +3,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>body{font-family:system-ui;max-width:64rem;margin:auto;padding:1rem}input{width:100%;box-sizing:border-box;padding:.4rem;margin:.3rem 0}td,th{border:1px solid #ccc;padding:.3rem}table{border-collapse:collapse;width:100%}button{margin:.2rem}pre{background:#f4f4f4;padding:.5rem;overflow:auto}code{background:#eee;padding:0 .2rem}</style>
 </head><body><h2>Redir admin</h2><div id=status></div><span id=msg></span>
-<form id=f><input id=id placeholder=id required><input id=url placeholder="url" required><input id=desc placeholder=description><button>Save</button></form>
-<table id=t><thead><tr><th>id</th><th>url</th><th>desc</th><th></th></tr></thead><tbody></tbody></table>
+<form id=f><input id=id placeholder=id required><input id=url placeholder="url" required><input id=desc placeholder=description><input id=group placeholder=group><input id=sort placeholder=sort type=number step=any><button>Save</button></form>
+<table id=t><thead><tr><th>id</th><th>url</th><th>desc</th><th>group</th><th>sort</th><th></th></tr></thead><tbody></tbody></table>
 <details id=setup><summary>Oppsett (første gang)</summary><ol>
 <li>Opprett prosjekt: <a target=_blank rel=noopener href="https://supabase.com/dashboard/project/new">supabase.com/dashboard/project/new</a></li>
 <li>Lim inn Project URL + publishable key i <code>db.js</code> (Settings → API): <a target=_blank rel=noopener href="https://supabase.com/dashboard/project/_/settings/api">supabase.com/dashboard/project/_/settings/api</a></li>

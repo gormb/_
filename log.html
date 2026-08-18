@@ -1,0 +1,29 @@
+<!doctype html><html lang=no><head><meta charset=utf-8><title>Log</title>
+<script src=db.js></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body{font-family:system-ui;max-width:72rem;margin:auto;padding:1rem}
+td,th{border:1px solid #ccc;padding:.3rem;vertical-align:top}
+table{border-collapse:collapse;width:100%;margin:.3rem 0 1.5rem}
+code{background:#eee;padding:0 .2rem}
+pre{background:#f4f4f4;padding:.5rem;overflow:auto;font-size:.75rem;white-space:pre-wrap;word-break:break-all}
+</style>
+</head><body><h2>Log</h2><div id=status></div><div id=out></div>
+<script>
+const sb=supabase.createClient(SUPABASE.url,SUPABASE.publishableKey),$=id=>document.getElementById(id)
+$('status').innerHTML=SUPABASE.url.includes('YOUR-')?'⚠️ Konfigurer <b>db.js</b> først':'✅ '+SUPABASE.url
+;(async()=>{
+  if(SUPABASE.url.includes('YOUR-'))return
+  const[L,R]=await Promise.all([
+    sb.from('log').select('*').order('ts',{ascending:false}).limit(500),
+    sb.from('redir').select('id,"group",sort').order('sort')])
+  const group=Object.fromEntries((R.data||[]).map(r=>[r.id,r.group]))
+  const fmt=x=>new Date(x.ts).toLocaleString()
+  const dt=x=>`<details><summary>detalj</summary><pre>${JSON.stringify(x.d||{},null,2)}</pre></details>`
+  const red={},home=[]
+  for(const x of L.data||[])x.u?(red[group[x.k]||'?']??=[]).push(x):home.push(x)
+  const tabs=rs=>`<table><tr><th>id</th><th>tid</th><th>url</th><th></th></tr>`+rs.map(r=>`<tr><td>${r.k??''}</td><td>${fmt(r)}</td><td>${r.u?'<a target=_blank rel=noopener href="'+r.u+'">'+r.u.slice(0,70)+'</a>':''}</td><td>${dt(r)}</td></tr>`).join('')+'</table>'
+  $('out').innerHTML=`<h3>Redirects</h3>`+Object.entries(red).map(([gr,rs])=>`<h4>${gr} (${rs.length})</h4>`+tabs(rs)).join('')+`<h3>Homepage (parameter ikke funnet eller ikke til stede)</h3>`+tabs(home)
+})()
+</script>
+</body></html>
