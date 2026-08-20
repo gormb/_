@@ -1,7 +1,7 @@
 <!doctype html><html><head><style>img{padding-right:2vw}</style><script src=db.js></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head><body><script>
 const nt=h=>`</td></tr></table><h2>${h}</h2><table><tr><td>`, l=`</td></tr><tr><td>`
-,qr=async x=>{window.QRCodeStyling||await new Promise((r,j)=>(s=document.createElement("script"),s.src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js",s.onload=r,s.onerror=j,document.head.appendChild(s)));return URL.createObjectURL(await new window.QRCodeStyling({width:300,height:300,data:"https://gormb.github.io/_?"+x,image:x.slice(0,-2)+".png",imageOptions:{margin:0}}).getRawData('png'))}
-,c=async r=>{const x=r.id,t=r.desc||x;return x.endsWith("qr")?`<td><br><a href="?${x}"><img src="${await qr(x).catch(()=>x+".png")}" style="width:16vw"><br>${t}</a>`:`<td><br><a href="?${x}"><img src="${x}.png" style="width:16vw"><br>${t}</a>`}
+,qr=async(x,I=1)=>{window.QRCodeStyling||await new Promise((r,j)=>(s=document.createElement("script"),s.src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js",s.onload=r,s.onerror=j,document.head.appendChild(s)));const o={width:300,height:300,data:"https://gormb.github.io/_?"+x,imageOptions:{margin:0}};if(I){const f=x.slice(0,-2)+".png";await fetch(f,{method:"HEAD"}).then(r=>r.ok&&(o.image=f)).catch(()=>{})}return URL.createObjectURL(await new window.QRCodeStyling(o).getRawData('png'))}
+,c=async r=>{const x=r.id,t=r.desc||x;return x.endsWith("qr")?`<td><br><a href="?${x}"><img src="${await qr(x).catch(()=>qr(x,0))}" style="width:16vw"><br>${t}</a>`:`<td><br><a href="?${x}"><img src="${x}.png" style="width:16vw"><br>${t}</a>`}
 ,go=(p,k,u)=>{p.delete(k);
   s=p.toString();
   window.location.assign(u+(s?(u.includes("?")?"&":"?")+s:""))
