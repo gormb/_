@@ -1,0 +1,22 @@
+<!doctype html><html lang=no><head><meta charset=utf-8><title>Log</title>
+<script src=db.js></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- logging via shared logVisit() in db.js -->
+<script>
+// log sessions, users (returning) etc by creating a user id saved in application memory (handled by logVisit in db.js)
+function logAct(what,el){
+  logVisit('loggable:'+what+(el&&el.id?':'+el.id:''),location.href)
+}
+</script>
+</head>
+<body onload="logAct('load')"><h2>Loggable</h2>
+    <button id="b1" onclick="logAct('click',this)">Button 1</button>
+    <button id="b2" onclick="logAct('click',this)">Button 2</button>
+</body>
+<!-- SQL for deploy 
+/* table creation and index creation */
+create table if not exists public.log (id bigint generated always as identity primary key,ts timestamptz default now(),k text,u text,d jsonb);
+create index if not exists log_k_idx on public.log(k);
+create index if not exists log_ts_idx on public.log(ts desc);
+create or replace function public.log_visit(k text,u text,d jsonb) returns void language sql as $$ insert into public.log(k,u,d) values(k,u,d); $$;
+-->
+</html>
