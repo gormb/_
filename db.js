@@ -13,16 +13,41 @@ window.db = {
   h() {
     return { apikey: SUPABASE.publishableKey, 'Authorization': 'Bearer ' + SUPABASE.publishableKey, 'Content-Type': 'application/json' };
   },
-  // True hvis `code` finnes i `codes` OG dtfrom <= now <= dtto.
-  async codeValid(code) {
+  // Vedvarende enhets-fingerprint (localStorage) + økt-id (sessionStorage) – for usage-logg.
+  fp() {
+    let f = localStorage.getItem('LdD.fp');
+    if (!f) { f = crypto.randomUUID(); localStorage.setItem('LdD.fp', f); }
+    return f;
+  },
+  sid() {
+    let s = sessionStorage.getItem('LdD.sid');
+    if (!s) { s = crypto.randomUUID(); sessionStorage.setItem('LdD.sid', s); }
+    return s;
+  },
+  // True hvis `code` finnes i `codes` for riktig `book`, dtfrom <= now <= dtto OG under use_limit.
+  async codeValid(code, book) {
     if (!SUPABASE || SUPABASE.url.includes('YOUR-') || !code) return false;
     try {
-      const r = await fetch(SUPABASE.url + '/rest/v1/codes?code=eq.' + encodeURIComponent(code) + '&select=code,dtfrom,dtto', { headers: db.h() });
+      const h = db.h(), e = encodeURIComponent;
+      const r = await fetch(SUPABASE.url + '/rest/v1/codes?code=eq.' + e(code) + '&book=eq.' + e(book || '') + '&select=code,dtfrom,dtto,use_limit', { headers: h });
       if (!r.ok) return false;
       const row = (await r.json())[0];
       if (!row) return false;
       const n = Date.now();
-      return new Date(row.dtfrom).getTime() <= n && n <= new Date(row.dtto).getTime();
+      if (new Date(row.dtfrom).getTime() > n || n > new Date(row.dtto).getTime()) return false;
+      if (row.use_limit == null) return true; // ubegrenset
+      const u = await fetch(SUPABASE.url + '/rest/v1/usage?code_id=eq.' + e(row.code) + '&select=id', { headers: h });
+      if (!u.ok) return false;
+      return (await u.json()).length < row.use_limit; // racy er greit
     } catch (e) { return false; }
+  },
+  // Logg hendelse til `usage` (fire-and-forget) – `code` (premium_activate) teller mot use_limit.
+  logUsage(o = {}) {
+    if (!SUPABASE || SUPABASE.url.includes('YOUR-')) return Promise.resolve();
+    const body = {
+      fingerprint: db.fp(), session_id: db.sid(),
+      code_id: o.code || null, book: o.book || null, page: o.page ?? null, event: o.event || ''
+    };
+    return fetch(SUPABASE.url + '/rest/v1/usage', { method: 'POST', headers: db.h(), body: JSON.stringify(body) }).catch(() => {});
   }
 };
