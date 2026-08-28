@@ -10,8 +10,6 @@ window.logVisit=(k,u)=>{
 
 // Shared Supabase helpers (window.db) — PostgREST REST, samme headers som logVisit.
 window.db = {
-  // Hvor lenge en «bruk» av koden regnes som aktiv (rullerende vindu). Juster etter behov.
-  ACTIVE_MS: 7 * 24 * 3600 * 1000, // 7 dager
   h() {
     return { apikey: SUPABASE.publishableKey, 'Authorization': 'Bearer ' + SUPABASE.publishableKey, 'Content-Type': 'application/json' };
   },
@@ -68,9 +66,10 @@ window.db = {
     } catch (e) { return { ok: false, reason: 'connection', error: e?.message }; } // fetch kastet = tilkoblingsfeil
   },
   // stillValid (ETTER lasting fra localStorage) – «er jeg fortsatt OK?»
-  // Sjekker om DENNE enheten fortsatt er innenfor rullerende vindu / limit. Hvis ikke → be om koden igjen.
-  //   {ok:true}                            = fortsatt OK (enheten aktiv / plass ledig)
-  //   {ok:false}                           = ikke OK lenger → be om koden igjen
+  // Rullerende bruk basert på USE (ingen fast tidsvindu): de NYESTE `use_limit` distinkte
+  // enhetene er aktive; eldre bruk ruller ut (blir ugyldig). Hvis ikke OK → be om koden igjen.
+  //   {ok:true}   = denne enheten er fortsatt blant de nyeste brukerne av koden
+  //   {ok:false}  = enheten er rullet ut (gammel) → be om koden igjen
   async stillValid(code, book) {
     if (!SUPABASE || SUPABASE.url.includes('YOUR-') || !code) return { ok: false, reason: 'noconfig' };
     try {
@@ -81,15 +80,18 @@ window.db = {
       if (!row) return { ok: false, reason: 'notfound' };
       const n = Date.now();
       if (new Date(row.dtfrom).getTime() > n || n > new Date(row.dtto).getTime()) return { ok: false, reason: 'window' };
-      // Rullerende vindu: er DENNE enheten fortsatt blant de aktive (nylig premium_activate)?
-      const since = new Date(Date.now() - db.ACTIVE_MS).toISOString();
-      const u = await fetch(SUPABASE.url + '/rest/v1/usage?code_id=eq.' + e(row.code) + '&event=eq.premium_activate&select=fingerprint&created_at=gte.' + since, { headers: h });
+      if (row.use_limit == null) return { ok: true }; // ubegrenset
+      // Rullerende bruk basert på use: hent bruksrader nyest først, behold de nyeste distinkte enhetene (opp til use_limit).
+      const u = await fetch(SUPABASE.url + '/rest/v1/usage?code_id=eq.' + e(row.code) + '&event=eq.premium_activate&select=fingerprint&order=created_at.desc', { headers: h });
       if (!u.ok) return { ok: false, reason: 'error', status: u.status };
       const myFp = db.fp();
-      const active = new Set((await u.json()).map(x => x.fingerprint));
-      if (active.has(myFp)) return { ok: true };                                      // denne enheten er aktiv → fortsatt OK
-      if (row.use_limit == null || active.size < row.use_limit) return { ok: true };  // ubegrenset / plass ledig → OK
-      return { ok: false };                                                          // full av andre → be om koden igjen
+      const active = [], seen = new Set();
+      for (const x of (await u.json())) {
+        if (seen.has(x.fingerprint)) continue;
+        seen.add(x.fingerprint); active.push(x.fingerprint);
+        if (active.length >= row.use_limit) break; // bare de nyeste `use_limit` enhetene teller
+      }
+      return { ok: active.includes(myFp) }; // er denne enheten blant de nyeste? Ellers → be om koden igjen
     } catch (e) { return { ok: false, reason: 'connection', error: e?.message }; }
   },
   // Logg hendelse til `usage` (fire-and-forget) – `code` (premium_activate) er grunnlaget for «maks N samtidige».
