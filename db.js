@@ -91,6 +91,12 @@ window.db = {
         seen.add(x.fingerprint); active.push(x.fingerprint);
         if (active.length >= row.use_limit) break; // bare de nyeste `use_limit` enhetene teller
       }
+      // Diagnostikk: unike åpnet (bok) / brukt (kode) / tillatt (use_limit)
+      try {
+        const p = await fetch(SUPABASE.url + '/rest/v1/usage?book=eq.' + e(book || '') + '&event=eq.page&select=fingerprint', { headers: h });
+        const opened = p.ok ? new Set((await p.json()).map(x => x.fingerprint)).size : 'feil';
+        console.log('[stillValid]', code, 'opened:', opened, '| used:', active.length, '| permitted:', row.use_limit, '| this device OK:', active.includes(myFp));
+      } catch (e2) { console.log('[stillValid]', code, 'opened: feil', e2?.message); }
       return { ok: active.includes(myFp) }; // er denne enheten blant de nyeste? Ellers → be om koden igjen
     } catch (e) { return { ok: false, reason: 'connection', error: e?.message }; }
   },
