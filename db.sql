@@ -1,3 +1,20 @@
+-- Hendelseslogg for db.js logVisit() (skrives via log_visit RPC) – leses av log.html:
+create table if not exists log (
+  id bigint generated always as identity primary key,
+  ts timestamptz default now(),
+  k text,
+  u text,
+  d jsonb
+);
+create index if not exists log_k_idx on log(k);
+create index if not exists log_ts_idx on log(ts desc);
+create or replace function public.log_visit(k text,u text,d jsonb)
+returns void language sql as $$ insert into log(k,u,d) values(k,u,d); $$;
+-- RLS (open for the admin page):
+alter table log enable row level security;
+create policy log_all on log for all using (true) with check (true);
+-- NB: unquoted identifiers are folded to lowercase.
+
 create table if not exists codes (
   code text primary key,
   book text not null default '',
