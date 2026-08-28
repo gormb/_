@@ -10,13 +10,36 @@ window.logVisit=(k,u)=>{
 
 // Shared Supabase helpers (window.db) — PostgREST REST, samme headers som logVisit.
 window.db = {
+  // Hvor lenge en «bruk» av koden regnes som aktiv (rullerende vindu). Juster etter behov.
+  ACTIVE_MS: 7 * 24 * 3600 * 1000, // 7 dager
   h() {
     return { apikey: SUPABASE.publishableKey, 'Authorization': 'Bearer ' + SUPABASE.publishableKey, 'Content-Type': 'application/json' };
   },
-  // Vedvarende enhets-fingerprint (localStorage) + økt-id (sessionStorage) – for usage-logg.
+  // Vedvarende enhets-fingerprint = HASH av browser-egenskaper (stabil per enhet, på tvers av økter).
+  // «hashing a lot of browser stuff»: userAgent/platform/språk/tidssone/skjerm osv.
+  hashString(s, seed = 0) { // deterministisk 128-bit-hash (cyrb53-basert) formatert som UUID – synkron
+    let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+    for (let i = 0, ch; i < s.length; i++) {
+      ch = s.charCodeAt(i);
+      h1 = Math.imul(h1 ^ ch, 2654435761);
+      h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    const hex = n => (n >>> 0).toString(16).padStart(8, '0');
+    const a = hex(h1) + hex(h1 >>> 16) + hex(h2) + hex(h2 >>> 16);
+    return (a.slice(0, 8) + '-' + a.slice(8, 12) + '-4' + a.slice(13, 16) + '-' + ((8 + (a.charCodeAt(16) % 4)).toString(16)) + a.slice(17, 20) + '-' + a.slice(20, 32)).toLowerCase();
+  },
   fp() {
     let f = localStorage.getItem('LdD.fp');
-    if (!f) { f = crypto.randomUUID(); localStorage.setItem('LdD.fp', f); }
+    if (!f) {
+      const parts = [navigator.userAgent, navigator.platform, navigator.language,
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+        screen.width, screen.height, screen.colorDepth, devicePixelRatio,
+        navigator.hardwareConcurrency, navigator.maxTouchPoints];
+      f = db.hashString(parts.join('|'));
+      localStorage.setItem('LdD.fp', f);
+    }
     return f;
   },
   sid() {
@@ -29,7 +52,7 @@ window.db = {
   //   {ok:true}                            = gyldig (riktig bok, innenfor dtfrom..dtto, under use_limit)
   //   {ok:false, reason:'notfound'}        = koden finnes ikke for denne boken
   //   {ok:false, reason:'window'}          = koden finnes, men utenfor dtfrom..dtto
-  //   {ok:false, reason:'limit'}           = use_limit er nådd (koden er brukt opp)
+  //   {ok:false}                           = for mange samtidige enheter (rullerende vindu) – leseren blir bedt om å re-enter koden
   //   {ok:false, reason:'error'}           = TEKNISK feil: serveren svarte med HTTP-feil (f.eks. PostgREST 4xx/5xx)
   //   {ok:false, reason:'connection'}      = TILKOBLINGSFEIL: fetch kastet (nettverk/offline/CORS) – ingen respons
   //   {ok:false, reason:'noconfig'}        = Supabase ikke konfigurert / ingen kode
@@ -44,13 +67,20 @@ window.db = {
       const n = Date.now();
       if (new Date(row.dtfrom).getTime() > n || n > new Date(row.dtto).getTime()) return { ok: false, reason: 'window' };
       if (row.use_limit == null) return { ok: true }; // ubegrenset
-      const u = await fetch(SUPABASE.url + '/rest/v1/usage?code_id=eq.' + e(row.code) + '&select=id', { headers: h });
+      // «maks N samtidige»: tell DISTINCT fingerprints med nylig premium_activate for koden.
+      // Samme enhet (fingerprint) teller bare ÉN gang – gjentatt aktivering tar ikke ny plass.
+      const since = new Date(Date.now() - db.ACTIVE_MS).toISOString();
+      const u = await fetch(SUPABASE.url + '/rest/v1/usage?code_id=eq.' + e(row.code) + '&event=eq.premium_activate&select=fingerprint&created_at=gte.' + since, { headers: h });
       if (!u.ok) return { ok: false, reason: 'error', status: u.status };
-      if ((await u.json()).length >= row.use_limit) return { ok: false, reason: 'limit' };
+      const myFp = db.fp();
+      const active = new Set((await u.json()).map(x => x.fingerprint));
+      // For mange samtidige enheter innenfor rullerende vindu → ikke gyldig NÅ (ingen «limit»-feil):
+      // leseren blir bedt om å re-enter koden; polling for automatisk re-enter kommer senere.
+      if (active.size >= row.use_limit && !active.has(myFp)) return { ok: false };
       return { ok: true };
     } catch (e) { return { ok: false, reason: 'connection', error: e?.message }; } // fetch kastet = tilkoblingsfeil
   },
-  // Logg hendelse til `usage` (fire-and-forget) – `code` (premium_activate) teller mot use_limit.
+  // Logg hendelse til `usage` (fire-and-forget) – `code` (premium_activate) er grunnlaget for «maks N samtidige».
   logUsage(o = {}) {
     if (!SUPABASE || SUPABASE.url.includes('YOUR-')) return Promise.resolve();
     const body = {
