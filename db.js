@@ -24,22 +24,31 @@ window.db = {
     if (!s) { s = crypto.randomUUID(); sessionStorage.setItem('LdD.sid', s); }
     return s;
   },
-  // True hvis `code` finnes i `codes` for riktig `book`, dtfrom <= now <= dtto OG under use_limit.
+  // Returnerer resultatobjekt (ikke bool), så kallere kan skille
+  // "ugyldig kode" fra "tekniske feil" og "tilkoblingsfeil":
+  //   {ok:true}                            = gyldig (riktig bok, innenfor dtfrom..dtto, under use_limit)
+  //   {ok:false, reason:'notfound'}        = koden finnes ikke for denne boken
+  //   {ok:false, reason:'window'}          = koden finnes, men utenfor dtfrom..dtto
+  //   {ok:false, reason:'limit'}           = use_limit er nådd (koden er brukt opp)
+  //   {ok:false, reason:'error'}           = TEKNISK feil: serveren svarte med HTTP-feil (f.eks. PostgREST 4xx/5xx)
+  //   {ok:false, reason:'connection'}      = TILKOBLINGSFEIL: fetch kastet (nettverk/offline/CORS) – ingen respons
+  //   {ok:false, reason:'noconfig'}        = Supabase ikke konfigurert / ingen kode
   async codeValid(code, book) {
-    if (!SUPABASE || SUPABASE.url.includes('YOUR-') || !code) return false;
+    if (!SUPABASE || SUPABASE.url.includes('YOUR-') || !code) return { ok: false, reason: 'noconfig' };
     try {
       const h = db.h(), e = encodeURIComponent;
       const r = await fetch(SUPABASE.url + '/rest/v1/codes?code=eq.' + e(code) + '&book=eq.' + e(book || '') + '&select=code,dtfrom,dtto,use_limit', { headers: h });
-      if (!r.ok) return false;
+      if (!r.ok) return { ok: false, reason: 'error', status: r.status }; // serveren svarte med feil = teknisk feil
       const row = (await r.json())[0];
-      if (!row) return false;
+      if (!row) return { ok: false, reason: 'notfound' };
       const n = Date.now();
-      if (new Date(row.dtfrom).getTime() > n || n > new Date(row.dtto).getTime()) return false;
-      if (row.use_limit == null) return true; // ubegrenset
+      if (new Date(row.dtfrom).getTime() > n || n > new Date(row.dtto).getTime()) return { ok: false, reason: 'window' };
+      if (row.use_limit == null) return { ok: true }; // ubegrenset
       const u = await fetch(SUPABASE.url + '/rest/v1/usage?code_id=eq.' + e(row.code) + '&select=id', { headers: h });
-      if (!u.ok) return false;
-      return (await u.json()).length < row.use_limit; // racy er greit
-    } catch (e) { return false; }
+      if (!u.ok) return { ok: false, reason: 'error', status: u.status };
+      if ((await u.json()).length >= row.use_limit) return { ok: false, reason: 'limit' };
+      return { ok: true };
+    } catch (e) { return { ok: false, reason: 'connection', error: e?.message }; } // fetch kastet = tilkoblingsfeil
   },
   // Logg hendelse til `usage` (fire-and-forget) – `code` (premium_activate) teller mot use_limit.
   logUsage(o = {}) {
