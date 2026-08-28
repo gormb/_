@@ -47,12 +47,10 @@ window.db = {
     if (!s) { s = crypto.randomUUID(); sessionStorage.setItem('LdD.sid', s); }
     return s;
   },
-  // Returnerer resultatobjekt (ikke bool), så kallere kan skille
-  // "ugyldig kode" fra "tekniske feil" og "tilkoblingsfeil":
-  //   {ok:true}                            = gyldig (riktig bok, innenfor dtfrom..dtto, under use_limit)
+  // codeValid (INNTASTING) – sier ALDRI «nei» for en gyldig kode:
+  //   {ok:true}                            = gyldig (riktig bok, innenfor dtfrom..dtto)
   //   {ok:false, reason:'notfound'}        = koden finnes ikke for denne boken
   //   {ok:false, reason:'window'}          = koden finnes, men utenfor dtfrom..dtto
-  //   {ok:false}                           = for mange samtidige enheter (rullerende vindu) – leseren blir bedt om å re-enter koden
   //   {ok:false, reason:'error'}           = TEKNISK feil: serveren svarte med HTTP-feil (f.eks. PostgREST 4xx/5xx)
   //   {ok:false, reason:'connection'}      = TILKOBLINGSFEIL: fetch kastet (nettverk/offline/CORS) – ingen respons
   //   {ok:false, reason:'noconfig'}        = Supabase ikke konfigurert / ingen kode
@@ -60,25 +58,39 @@ window.db = {
     if (!SUPABASE || SUPABASE.url.includes('YOUR-') || !code) return { ok: false, reason: 'noconfig' };
     try {
       const h = db.h(), e = encodeURIComponent;
-      const r = await fetch(SUPABASE.url + '/rest/v1/codes?code=eq.' + e(code) + '&book=eq.' + e(book || '') + '&select=code,dtfrom,dtto,use_limit', { headers: h });
+      const r = await fetch(SUPABASE.url + '/rest/v1/codes?code=eq.' + e(code) + '&book=eq.' + e(book || '') + '&select=code,dtfrom,dtto', { headers: h });
       if (!r.ok) return { ok: false, reason: 'error', status: r.status }; // serveren svarte med feil = teknisk feil
       const row = (await r.json())[0];
       if (!row) return { ok: false, reason: 'notfound' };
       const n = Date.now();
       if (new Date(row.dtfrom).getTime() > n || n > new Date(row.dtto).getTime()) return { ok: false, reason: 'window' };
-      if (row.use_limit == null) return { ok: true }; // ubegrenset
-      // «maks N samtidige»: tell DISTINCT fingerprints med nylig premium_activate for koden.
-      // Samme enhet (fingerprint) teller bare ÉN gang – gjentatt aktivering tar ikke ny plass.
+      return { ok: true }; // gyldig kode → ALDRI avvist ved inntasting (samtidig-bruk håndteres av stillValid)
+    } catch (e) { return { ok: false, reason: 'connection', error: e?.message }; } // fetch kastet = tilkoblingsfeil
+  },
+  // stillValid (ETTER lasting fra localStorage) – «er jeg fortsatt OK?»
+  // Sjekker om DENNE enheten fortsatt er innenfor rullerende vindu / limit. Hvis ikke → be om koden igjen.
+  //   {ok:true}                            = fortsatt OK (enheten aktiv / plass ledig)
+  //   {ok:false}                           = ikke OK lenger → be om koden igjen
+  async stillValid(code, book) {
+    if (!SUPABASE || SUPABASE.url.includes('YOUR-') || !code) return { ok: false, reason: 'noconfig' };
+    try {
+      const h = db.h(), e = encodeURIComponent;
+      const r = await fetch(SUPABASE.url + '/rest/v1/codes?code=eq.' + e(code) + '&book=eq.' + e(book || '') + '&select=code,dtfrom,dtto,use_limit', { headers: h });
+      if (!r.ok) return { ok: false, reason: 'error', status: r.status };
+      const row = (await r.json())[0];
+      if (!row) return { ok: false, reason: 'notfound' };
+      const n = Date.now();
+      if (new Date(row.dtfrom).getTime() > n || n > new Date(row.dtto).getTime()) return { ok: false, reason: 'window' };
+      // Rullerende vindu: er DENNE enheten fortsatt blant de aktive (nylig premium_activate)?
       const since = new Date(Date.now() - db.ACTIVE_MS).toISOString();
       const u = await fetch(SUPABASE.url + '/rest/v1/usage?code_id=eq.' + e(row.code) + '&event=eq.premium_activate&select=fingerprint&created_at=gte.' + since, { headers: h });
       if (!u.ok) return { ok: false, reason: 'error', status: u.status };
       const myFp = db.fp();
       const active = new Set((await u.json()).map(x => x.fingerprint));
-      // For mange samtidige enheter innenfor rullerende vindu → ikke gyldig NÅ (ingen «limit»-feil):
-      // leseren blir bedt om å re-enter koden; polling for automatisk re-enter kommer senere.
-      if (active.size >= row.use_limit && !active.has(myFp)) return { ok: false };
-      return { ok: true };
-    } catch (e) { return { ok: false, reason: 'connection', error: e?.message }; } // fetch kastet = tilkoblingsfeil
+      if (active.has(myFp)) return { ok: true };                                      // denne enheten er aktiv → fortsatt OK
+      if (row.use_limit == null || active.size < row.use_limit) return { ok: true };  // ubegrenset / plass ledig → OK
+      return { ok: false };                                                          // full av andre → be om koden igjen
+    } catch (e) { return { ok: false, reason: 'connection', error: e?.message }; }
   },
   // Logg hendelse til `usage` (fire-and-forget) – `code` (premium_activate) er grunnlaget for «maks N samtidige».
   logUsage(o = {}) {
