@@ -104,6 +104,18 @@ window.db = {
       return { ok: false }; // full av andre → be om koden igjen
     } catch (e) { return { ok: false, reason: 'connection', error: e?.message }; }
   },
+  // hent premium-recheck-intervall (sek) for en bok – default 60.
+  async bookInterval(book) {
+    if (!SUPABASE || SUPABASE.url.includes('YOUR-')) return 60;
+    try {
+      const h = db.h(), e = encodeURIComponent;
+      const r = await fetch(SUPABASE.url + '/rest/v1/books?book=eq.' + e(book || '') + '&select=premiumCheckInterval', { headers: h });
+      if (!r.ok) return 60;
+      const row = (await r.json())[0];
+      const v = row && row.premiumCheckInterval;
+      return (v == null || !(v > 0)) ? 60 : v;
+    } catch (e) { return 60; }
+  },
   // Logg hendelse til `usage` (fire-and-forget) – `code` (premium_activate) er grunnlaget for «maks N samtidige».
   logUsage(o = {}) {
     if (!SUPABASE || SUPABASE.url.includes('YOUR-')) return Promise.resolve();
