@@ -58,9 +58,8 @@ window.db = {
     }
     return { myFp, active };
   },
-  // codeValid (INNTASTING) – gyldig kode + innenfor samtidig-limit:
-  //   {ok:true}                            = gyldig (riktig bok, innenfor dtfrom..dtto) OG plass / denne enheten OK
-  //   {ok:false, reason:'limit'}           = koden er full av andre → be om koden igjen (re-enter, ingen melding)
+  // codeValid (INNTASTING) – sier ALDRI «nei» for en gyldig kode:
+  //   {ok:true}                            = gyldig (riktig bok, innenfor dtfrom..dtto)
   //   {ok:false, reason:'notfound'}        = koden finnes ikke for denne boken
   //   {ok:false, reason:'window'}          = koden finnes, men utenfor dtfrom..dtto
   //   {ok:false, reason:'error'}           = TEKNISK feil: serveren svarte med HTTP-feil (f.eks. PostgREST 4xx/5xx)
@@ -70,17 +69,13 @@ window.db = {
     if (!SUPABASE || SUPABASE.url.includes('YOUR-') || !code) return { ok: false, reason: 'noconfig' };
     try {
       const h = db.h(), e = encodeURIComponent;
-      const r = await fetch(SUPABASE.url + '/rest/v1/codes?code=eq.' + e(code) + '&book=eq.' + e(book || '') + '&select=code,dtfrom,dtto,use_limit', { headers: h });
+      const r = await fetch(SUPABASE.url + '/rest/v1/codes?code=eq.' + e(code) + '&book=eq.' + e(book || '') + '&select=code,dtfrom,dtto', { headers: h });
       if (!r.ok) return { ok: false, reason: 'error', status: r.status }; // serveren svarte med feil = teknisk feil
       const row = (await r.json())[0];
       if (!row) return { ok: false, reason: 'notfound' };
       const n = Date.now();
       if (new Date(row.dtfrom).getTime() > n || n > new Date(row.dtto).getTime()) return { ok: false, reason: 'window' };
-      if (row.use_limit == null) return { ok: true }; // ubegrenset
-      // Rullerende bruk basert på use: er denne enheten blant de nyeste `use_limit` brukerne, eller er det plass?
-      const { myFp, active } = await this._active(row.code, row.use_limit);
-      if (active.includes(myFp) || active.length < row.use_limit) return { ok: true };
-      return { ok: false, reason: 'limit' }; // full av andre → be om koden igjen (ingen skremmende melding)
+      return { ok: true }; // gyldig kode → ALDRI avvist ved inntasting (samtidig-bruk håndteres av stillValid ved restore)
     } catch (e) { return { ok: false, reason: 'connection', error: e?.message }; } // fetch kastet = tilkoblingsfeil
   },
   // stillValid (ETTER lasting fra localStorage) – «er jeg fortsatt OK?» (samme limit-sjekk som codeValid)
