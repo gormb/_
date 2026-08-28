@@ -45,8 +45,22 @@ window.db = {
     if (!s) { s = crypto.randomUUID(); sessionStorage.setItem('LdD.sid', s); }
     return s;
   },
-  // codeValid (INNTASTING) – sier ALDRI «nei» for en gyldig kode:
-  //   {ok:true}                            = gyldig (riktig bok, innenfor dtfrom..dtto)
+  // felles hjelper: de nyeste `use_limit` distinkte enhetene som har aktivert koden (rullerende basert på use).
+  async _active(code, use_limit) {
+    const h = db.h(), e = encodeURIComponent;
+    const u = await fetch(SUPABASE.url + '/rest/v1/usage?code_id=eq.' + e(code) + '&event=eq.premium_activate&select=fingerprint&order=created_at.desc', { headers: h });
+    if (!u.ok) throw new Error('usage ' + u.status);
+    const myFp = db.fp(), active = [], seen = new Set();
+    for (const x of (await u.json())) {
+      if (seen.has(x.fingerprint)) continue;
+      seen.add(x.fingerprint); active.push(x.fingerprint);
+      if (use_limit != null && active.length >= use_limit) break;
+    }
+    return { myFp, active };
+  },
+  // codeValid (INNTASTING) – gyldig kode + innenfor samtidig-limit:
+  //   {ok:true}                            = gyldig (riktig bok, innenfor dtfrom..dtto) OG plass / denne enheten OK
+  //   {ok:false, reason:'limit'}           = koden er full av andre → be om koden igjen (re-enter, ingen melding)
   //   {ok:false, reason:'notfound'}        = koden finnes ikke for denne boken
   //   {ok:false, reason:'window'}          = koden finnes, men utenfor dtfrom..dtto
   //   {ok:false, reason:'error'}           = TEKNISK feil: serveren svarte med HTTP-feil (f.eks. PostgREST 4xx/5xx)
@@ -56,20 +70,23 @@ window.db = {
     if (!SUPABASE || SUPABASE.url.includes('YOUR-') || !code) return { ok: false, reason: 'noconfig' };
     try {
       const h = db.h(), e = encodeURIComponent;
-      const r = await fetch(SUPABASE.url + '/rest/v1/codes?code=eq.' + e(code) + '&book=eq.' + e(book || '') + '&select=code,dtfrom,dtto', { headers: h });
+      const r = await fetch(SUPABASE.url + '/rest/v1/codes?code=eq.' + e(code) + '&book=eq.' + e(book || '') + '&select=code,dtfrom,dtto,use_limit', { headers: h });
       if (!r.ok) return { ok: false, reason: 'error', status: r.status }; // serveren svarte med feil = teknisk feil
       const row = (await r.json())[0];
       if (!row) return { ok: false, reason: 'notfound' };
       const n = Date.now();
       if (new Date(row.dtfrom).getTime() > n || n > new Date(row.dtto).getTime()) return { ok: false, reason: 'window' };
-      return { ok: true }; // gyldig kode → ALDRI avvist ved inntasting (samtidig-bruk håndteres av stillValid)
+      if (row.use_limit == null) return { ok: true }; // ubegrenset
+      // Rullerende bruk basert på use: er denne enheten blant de nyeste `use_limit` brukerne, eller er det plass?
+      const { myFp, active } = await this._active(row.code, row.use_limit);
+      if (active.includes(myFp) || active.length < row.use_limit) return { ok: true };
+      return { ok: false, reason: 'limit' }; // full av andre → be om koden igjen (ingen skremmende melding)
     } catch (e) { return { ok: false, reason: 'connection', error: e?.message }; } // fetch kastet = tilkoblingsfeil
   },
-  // stillValid (ETTER lasting fra localStorage) – «er jeg fortsatt OK?»
-  // Rullerende bruk basert på USE (ingen fast tidsvindu): de NYESTE `use_limit` distinkte
-  // enhetene er aktive; eldre bruk ruller ut (blir ugyldig). Hvis ikke OK → be om koden igjen.
-  //   {ok:true}   = denne enheten er fortsatt blant de nyeste brukerne av koden
-  //   {ok:false}  = enheten er rullet ut (gammel) → be om koden igjen
+  // stillValid (ETTER lasting fra localStorage) – «er jeg fortsatt OK?» (samme limit-sjekk som codeValid)
+  // Rullerende bruk basert på USE: de nyeste `use_limit` enhetene er aktive; eldre ruller ut.
+  //   {ok:true}   = fortsatt OK → premium gjenopprettes
+  //   {ok:false}  = ikke OK (full av andre / utløpt) → be om koden igjen
   async stillValid(code, book) {
     if (!SUPABASE || SUPABASE.url.includes('YOUR-') || !code) return { ok: false, reason: 'noconfig' };
     try {
@@ -81,23 +98,15 @@ window.db = {
       const n = Date.now();
       if (new Date(row.dtfrom).getTime() > n || n > new Date(row.dtto).getTime()) return { ok: false, reason: 'window' };
       if (row.use_limit == null) return { ok: true }; // ubegrenset
-      // Rullerende bruk basert på use: hent bruksrader nyest først, behold de nyeste distinkte enhetene (opp til use_limit).
-      const u = await fetch(SUPABASE.url + '/rest/v1/usage?code_id=eq.' + e(row.code) + '&event=eq.premium_activate&select=fingerprint&order=created_at.desc', { headers: h });
-      if (!u.ok) return { ok: false, reason: 'error', status: u.status };
-      const myFp = db.fp();
-      const active = [], seen = new Set();
-      for (const x of (await u.json())) {
-        if (seen.has(x.fingerprint)) continue;
-        seen.add(x.fingerprint); active.push(x.fingerprint);
-        if (active.length >= row.use_limit) break; // bare de nyeste `use_limit` enhetene teller
-      }
+      const { myFp, active } = await this._active(row.code, row.use_limit);
       // Diagnostikk: unike åpnet (bok) / brukt (kode) / tillatt (use_limit)
       try {
         const p = await fetch(SUPABASE.url + '/rest/v1/usage?book=eq.' + e(book || '') + '&event=eq.page&select=fingerprint', { headers: h });
         const opened = p.ok ? new Set((await p.json()).map(x => x.fingerprint)).size : 'feil';
         console.log('[stillValid]', code, 'opened:', opened, '| used:', active.length, '| permitted:', row.use_limit, '| this device OK:', active.includes(myFp));
       } catch (e2) { console.log('[stillValid]', code, 'opened: feil', e2?.message); }
-      return { ok: active.includes(myFp) }; // er denne enheten blant de nyeste? Ellers → be om koden igjen
+      if (active.includes(myFp) || active.length < row.use_limit) return { ok: true };
+      return { ok: false }; // full av andre → be om koden igjen
     } catch (e) { return { ok: false, reason: 'connection', error: e?.message }; }
   },
   // Logg hendelse til `usage` (fire-and-forget) – `code` (premium_activate) er grunnlaget for «maks N samtidige».
