@@ -7,7 +7,7 @@ b:"/aniPublicOfficialReportSelfService/aniPublicOfficialReportSelfService_Html/w
 ,ln:"https://linkedin.com/in/gorm1"
 ,ed:"https://github.com/gormb/_/edit/main/index.html"
 
-},// Redir
+},
 p=new URLSearchParams(location.search),k=Object.keys(r).find(x=>p.has(x));
 if(k){p.delete(k);let s=p.toString();setTimeout(()=>location.replace(r[k]+(s?(r[k].includes("?")?"&":"?")+s:"")),0)}
 else document.body.innerHTML=`<h1>Gorm Braarvig</h1>`+Object.keys(r).map(x=>`<a href="?${x}">${x}</a>`).join("<br>")+"<hr>";

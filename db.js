@@ -1,6 +1,5 @@
 window.SUPABASE={url:"https://nlxtqmsghslwgbndxboe.supabase.co",publishableKey:"sb_publishable_H1UyOW06sr_Y6TkCai5OjQ_5rkdhfdO"};
-// Shared event logging for index.html, loggable.html etc. Logs to the "log" table via the log_visit RPC.
-// Creates/keeps a session id in sessionStorage (reused across pages in the same tab session).
+// Visit logging → log_visit RPC (log table); session id reused across pages.
 window.logVisit=(k,u)=>{
   if(!SUPABASE||SUPABASE.url.includes('YOUR-'))return
   let sid=sessionStorage.getItem('sid');if(!sid){sid=crypto.randomUUID();sessionStorage.setItem('sid',sid)}
@@ -8,14 +7,13 @@ window.logVisit=(k,u)=>{
   fetch(SUPABASE.url+"/rest/v1/rpc/log_visit",{method:"POST",keepalive:true,headers:{apikey:SUPABASE.publishableKey,'Authorization':'Bearer '+SUPABASE.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({k,u,d})}).catch(()=>{})
 }
 
-// Shared Supabase helpers (window.db) — PostgREST REST, samme headers som logVisit.
+// Supabase helpers (window.db) — PostgREST REST.
 window.db = {
   h() {
     return { apikey: SUPABASE.publishableKey, 'Authorization': 'Bearer ' + SUPABASE.publishableKey, 'Content-Type': 'application/json' };
   },
-  // Vedvarende enhets-fingerprint = HASH av browser-egenskaper (stabil per enhet, på tvers av økter).
-  // «hashing a lot of browser stuff»: userAgent/platform/språk/tidssone/skjerm osv.
-  hashString(s, seed = 0) { // deterministisk 128-bit-hash (cyrb53-basert) formatert som UUID – synkron
+  // Device fingerprint = hash of browser properties (stable per device).
+  hashString(s, seed = 0) { // deterministic 128-bit hash (cyrb53) → UUID, sync
     let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
     for (let i = 0, ch; i < s.length; i++) {
       ch = s.charCodeAt(i);
@@ -45,7 +43,7 @@ window.db = {
     if (!s) { s = crypto.randomUUID(); sessionStorage.setItem('LdD.sid', s); }
     return s;
   },
-  // felles hjelper: de nyeste `use_limit` distinkte enhetene som har aktivert koden (rullerende basert på use).
+  // Rolling: newest `use_limit` distinct devices that activated the code.
   async _active(code, use_limit) {
     const h = db.h(), e = encodeURIComponent;
     const u = await fetch(SUPABASE.url + '/rest/v1/usage?code_id=eq.' + e(code) + '&event=eq.premium_activate&select=fingerprint&order=created_at.desc', { headers: h });
@@ -58,30 +56,21 @@ window.db = {
     }
     return { myFp, active };
   },
-  // codeValid (INNTASTING) – sier ALDRI «nei» for en gyldig kode:
-  //   {ok:true}                            = gyldig (riktig bok, innenfor dtfrom..dtto)
-  //   {ok:false, reason:'notfound'}        = koden finnes ikke for denne boken
-  //   {ok:false, reason:'window'}          = koden finnes, men utenfor dtfrom..dtto
-  //   {ok:false, reason:'error'}           = TEKNISK feil: serveren svarte med HTTP-feil (f.eks. PostgREST 4xx/5xx)
-  //   {ok:false, reason:'connection'}      = TILKOBLINGSFEIL: fetch kastet (nettverk/offline/CORS) – ingen respons
-  //   {ok:false, reason:'noconfig'}        = Supabase ikke konfigurert / ingen kode
+  // Valid: {ok:true}. Invalid: {ok:false, reason:'notfound'|'window'|'error'|'connection'|'noconfig'}.
   async codeValid(code, book) {
     if (!SUPABASE || SUPABASE.url.includes('YOUR-') || !code) return { ok: false, reason: 'noconfig' };
     try {
       const h = db.h(), e = encodeURIComponent;
       const r = await fetch(SUPABASE.url + '/rest/v1/codes?code=eq.' + e(code) + '&book=eq.' + e(book || '') + '&select=code,dtfrom,dtto', { headers: h });
-      if (!r.ok) return { ok: false, reason: 'error', status: r.status }; // serveren svarte med feil = teknisk feil
+      if (!r.ok) return { ok: false, reason: 'error', status: r.status }; // HTTP error = technical failure
       const row = (await r.json())[0];
       if (!row) return { ok: false, reason: 'notfound' };
       const n = Date.now();
       if (new Date(row.dtfrom).getTime() > n || n > new Date(row.dtto).getTime()) return { ok: false, reason: 'window' };
-      return { ok: true }; // gyldig kode → ALDRI avvist ved inntasting (samtidig-bruk håndteres av stillValid ved restore)
-    } catch (e) { return { ok: false, reason: 'connection', error: e?.message }; } // fetch kastet = tilkoblingsfeil
+      return { ok: true }; // never reject a valid code on entry; concurrency handled by stillValid
+    } catch (e) { return { ok: false, reason: 'connection', error: e?.message }; } // fetch threw = connection failure
   },
-  // stillValid (ETTER lasting fra localStorage) – «er jeg fortsatt OK?» (samme limit-sjekk som codeValid)
-  // Rullerende bruk basert på USE: de nyeste `use_limit` enhetene er aktive; eldre ruller ut.
-  //   {ok:true}   = fortsatt OK → premium gjenopprettes
-  //   {ok:false}  = ikke OK (full av andre / utløpt) → be om koden igjen
+  // Restore check: {ok:true} if still within window/limit (rolling), else {ok:false}.
   async stillValid(code, book) {
     if (!SUPABASE || SUPABASE.url.includes('YOUR-') || !code) return { ok: false, reason: 'noconfig' };
     try {
@@ -92,19 +81,19 @@ window.db = {
       if (!row) return { ok: false, reason: 'notfound' };
       const n = Date.now();
       if (new Date(row.dtfrom).getTime() > n || n > new Date(row.dtto).getTime()) return { ok: false, reason: 'window' };
-      if (row.use_limit == null) return { ok: true }; // ubegrenset
+      if (row.use_limit == null) return { ok: true }; // unlimited
       const { myFp, active } = await this._active(row.code, row.use_limit);
-      // Diagnostikk: unike åpnet (bok) / brukt (kode) / tillatt (use_limit)
+      // Debug: opened (book) vs used (code) vs permitted (use_limit)
       try {
         const p = await fetch(SUPABASE.url + '/rest/v1/usage?book=eq.' + e(book || '') + '&event=eq.page&select=fingerprint', { headers: h });
         const opened = p.ok ? new Set((await p.json()).map(x => x.fingerprint)).size : 'feil';
         console.log('[stillValid]', code, 'opened:', opened, '| used:', active.length, '| permitted:', row.use_limit, '| this device OK:', active.includes(myFp));
       } catch (e2) { console.log('[stillValid]', code, 'opened: feil', e2?.message); }
       if (active.includes(myFp) || active.length < row.use_limit) return { ok: true };
-      return { ok: false }; // full av andre → be om koden igjen
+      return { ok: false }; // full → ask for code again
     } catch (e) { return { ok: false, reason: 'connection', error: e?.message }; }
   },
-  // hent premium-recheck-intervall (sek) for en bok – default 60.
+  // Premium recheck interval (s) for a book — default 60.
   async bookInterval(book) {
     if (!SUPABASE || SUPABASE.url.includes('YOUR-')) return 60;
     try {
@@ -116,7 +105,7 @@ window.db = {
       return (v == null || !(v > 0)) ? 60 : v;
     } catch (e) { return 60; }
   },
-  // Logg hendelse til `usage` (fire-and-forget) – `code` (premium_activate) er grunnlaget for «maks N samtidige».
+  // Log event to usage table (fire-and-forget).
   logUsage(o = {}) {
     if (!SUPABASE || SUPABASE.url.includes('YOUR-')) return Promise.resolve();
     const body = {

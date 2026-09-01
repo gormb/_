@@ -1,4 +1,4 @@
-// Redir admin - kort. IIFE => ingen globale navn.
+// Redir admin — IIFE, no globals.
 (()=>{const sb=supabase.createClient(SUPABASE.url,SUPABASE.publishableKey),$=id=>document.getElementById(id),ready=!SUPABASE.url.includes('YOUR-'),list=$('t').tBodies[0];let returnY=null
 $('status').innerHTML=ready?`✅ ${SUPABASE.url}`:'⚠️ Konfigurer <b>db.js</b> (URL + publishable key) – se «Oppsett» under.'
 const load=async()=>{const{data,error}=await sb.from('redir').select('id,url,"desc","group",sort').order('sort').order('sort','id');$('msg').textContent=error?.message||'';list.innerHTML=(data||[]).map(r=>`<tr data-id="${r.id}" data-url="${r.url}" data-desc="${r.desc||''}" data-group="${r.group||''}" data-sort="${r.sort??''}"><td>${r.id}</td><td><a target=_blank rel=noopener href="${r.url}">${r.url}</a></td><td>${r.desc||''}</td><td>${r.group||''}</td><td>${r.sort??''}</td><td><button data-e>✎</button><button data-d>🗑</button></td></tr>`).join('')}
