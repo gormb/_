@@ -12,6 +12,7 @@ create or replace function public.log_visit(k text,u text,d jsonb)
 returns void language sql as $$ insert into log(k,u,d) values(k,u,d); $$;
 -- RLS open for admin.
 alter table log enable row level security;
+drop policy if exists log_all on log;
 create policy log_all on log for all using (true) with check (true);
 -- Note: unquoted identifiers fold to lowercase.
 
@@ -29,6 +30,7 @@ create table if not exists codes (
 -- alter table codes add column if not exists created_at timestamptz default now();
 -- RLS open for admin.
 alter table codes enable row level security;
+drop policy if exists codes_all on codes;
 create policy codes_all on codes for all using (true) with check (true);
 -- Note: unquoted identifiers fold to lowercase (dtfrom/dtto).
 create table if not exists usage (
@@ -43,6 +45,7 @@ create table if not exists usage (
 );
 -- RLS open for admin.
 alter table usage enable row level security;
+drop policy if exists usage_all on usage;
 create policy usage_all on usage for all using (true) with check (true);
 -- Note: usage written by db.js logUsage; logic in code, not SQL.
 create table if not exists books (
@@ -54,5 +57,6 @@ create table if not exists books (
 );
 -- RLS open for admin.
 alter table books enable row level security;
+drop policy if exists books_all on books;
 create policy books_all on books for all using (true) with check (true);
 -- Note: unquoted identifiers fold to lowercase (dtautosyncfrom/dtautosyncto).
