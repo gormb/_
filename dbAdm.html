@@ -1,15 +1,18 @@
 <!doctype html><html lang=en><head><meta charset=utf-8><title>Redir admin</title>
 <script src=db.js></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>body{font-family:system-ui;max-width:64rem;margin:auto;padding:1rem}input{width:100%;box-sizing:border-box;padding:.4rem;margin:.3rem 0}td,th{border:1px solid #ccc;padding:.3rem}table{border-collapse:collapse;width:100%;table-layout:fixed}#t th:nth-child(2),#t td:nth-child(2){width:25vw;max-width:25vw;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}button{margin:.2rem}pre{background:#f4f4f4;padding:.5rem;overflow:auto}code{background:#eee;padding:0 .2rem}</style>
-</head><body><h2>Redir admin</h2><div id=status></div><span id=msg></span>
+<style>body{font-family:system-ui;max-width:64rem;margin:auto;padding:1rem}input:not([type=checkbox]):not([type=file]){width:100%;box-sizing:border-box;padding:.4rem;margin:.3rem 0}input[type=checkbox]{width:auto;padding:0;margin:0 .35em 0 0;vertical-align:middle}td,th{border:1px solid #ccc;padding:.3rem}table{border-collapse:collapse;width:100%;table-layout:fixed}#t th:nth-child(2),#t td:nth-child(2){width:25vw;max-width:25vw;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}button{margin:.2rem}pre{background:#f4f4f4;padding:.5rem;overflow:auto}code{background:#eee;padding:0 .2rem}</style>
+</head><body><h2>Redir admin</h2>
+<details id=setup><summary>Util (setup first time, import, export)</summary><ol>
+    <li>Create project: <a target=_blank rel=noopener href="https://supabase.com/dashboard/project/new">supabase.com/dashboard/project/new</a></li>
+    <li>Paste URL+key into <code>db.js</code>: <a target=_blank rel=noopener href="https://supabase.com/dashboard/project/_/settings/api">supabase.com/dashboard/project/_/settings/api</a></li>
+    <li>Create <code>redir</code> table: <a target=_blank rel=noopener href="https://supabase.com/dashboard/project/_/sql">supabase.com/dashboard/project/_/sql</a><pre>create table if not exists public.redir ( id text primary key, url text not null, "desc" text );</pre></li>
+    <li>Export: <button id=bk-redir>redir</button> <button id=bk-log>log</button> <label><input type=checkbox id=trunc-export> Truncate after export</label></li>
+    <li>Import: <button id=im-redir>redir</button> <button id=im-log>log</button> <label><input type=checkbox id=merge-imp> Merge on import</label> <input type=file id=imp-file accept=".tsv,.txt,.csv" hidden></li>
+    </ol>
+    <div id=status></div><span id=msg></span>
+</details><hr>
 <form id=f><input id=id placeholder=id required><input id=url style="width:25vw;max-width:25vw" placeholder="url" required><input id=desc placeholder=description><input id=group placeholder=group><input id=sort placeholder=sort type=number step=any><button>Save</button><button id=cancel type=button hidden>Cancel</button></form>
-<table id=t><thead><tr><th>id</th><th>url</th><th>desc</th><th>group</th><th>sort</th><th></th></tr></thead><tbody></tbody></table>
-<details id=setup><summary>Setup (first time)</summary><ol>
-<li>Create project: <a target=_blank rel=noopener href="https://supabase.com/dashboard/project/new">supabase.com/dashboard/project/new</a></li>
-<li>Paste Project URL + publishable key into <code>db.js</code> (Settings → API): <a target=_blank rel=noopener href="https://supabase.com/dashboard/project/_/settings/api">supabase.com/dashboard/project/_/settings/api</a></li>
-<li>Create the <code>redir</code> table (SQL Editor): <a target=_blank rel=noopener href="https://supabase.com/dashboard/project/_/sql">supabase.com/dashboard/project/_/sql</a>
-<pre>create table if not exists public.redir ( id text primary key, url text not null, "desc" text );</pre></li>
-</ol></details>
+<hr><table id=t><thead><tr><th>id</th><th>url</th><th>desc</th><th>group</th><th>sort</th><th></th></tr></thead><tbody></tbody></table>
 <script src=dbAdm.js></script>
 </body></html>
