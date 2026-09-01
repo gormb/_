@@ -2,7 +2,7 @@ window.SUPABASE={url:"https://nlxtqmsghslwgbndxboe.supabase.co",publishableKey:"
 // Visit logging → log_visit RPC (log table); session id reused across pages.
 window.logVisit=(k,u)=>{
   if(!SUPABASE||SUPABASE.url.includes('YOUR-'))return
-  let sid=sessionStorage.getItem('sid');if(!sid){sid=crypto.randomUUID();sessionStorage.setItem('sid',sid)}
+  let sid;try{sid=sessionStorage.getItem('sid');if(!sid){sid=crypto.randomUUID();sessionStorage.setItem('sid',sid)}}catch(e){sid=crypto.randomUUID()}
   const d={sid,r:document.referrer,ua:navigator.userAgent,p:navigator.platform,l:navigator.language,z:Intl.DateTimeFormat().resolvedOptions().timeZone,s:[screen.width,screen.height],d:screen.colorDepth,x:devicePixelRatio,c:navigator.hardwareConcurrency,m:navigator.deviceMemory,t:navigator.maxTouchPoints}
   fetch(SUPABASE.url+"/rest/v1/rpc/log_visit",{method:"POST",keepalive:true,headers:{apikey:SUPABASE.publishableKey,'Authorization':'Bearer '+SUPABASE.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({k,u,d})}).catch(()=>{})
 }
@@ -27,21 +27,22 @@ window.db = {
     return (a.slice(0, 8) + '-' + a.slice(8, 12) + '-4' + a.slice(13, 16) + '-' + ((8 + (a.charCodeAt(16) % 4)).toString(16)) + a.slice(17, 20) + '-' + a.slice(20, 32)).toLowerCase();
   },
   fp() {
-    let f = localStorage.getItem('LdD.fp');
-    if (!f) {
-      const parts = [navigator.userAgent, navigator.platform, navigator.language,
-        Intl.DateTimeFormat().resolvedOptions().timeZone,
-        screen.width, screen.height, screen.colorDepth, devicePixelRatio,
-        navigator.hardwareConcurrency, navigator.maxTouchPoints];
-      f = db.hashString(parts.join('|'));
-      localStorage.setItem('LdD.fp', f);
-    }
-    return f;
+    const parts = [navigator.userAgent, navigator.platform, navigator.language,
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+      screen.width, screen.height, screen.colorDepth, devicePixelRatio,
+      navigator.hardwareConcurrency, navigator.maxTouchPoints];
+    const f = db.hashString(parts.join('|'));
+    try { return localStorage.getItem('LdD.fp') || (localStorage.setItem('LdD.fp', f), f); }
+    catch (e) { return f; } // storage blocked → per-call id; logging still works
   },
   sid() {
-    let s = sessionStorage.getItem('LdD.sid');
-    if (!s) { s = crypto.randomUUID(); sessionStorage.setItem('LdD.sid', s); }
-    return s;
+    try {
+      let s = sessionStorage.getItem('LdD.sid');
+      if (s) return s;
+      s = crypto.randomUUID();
+      sessionStorage.setItem('LdD.sid', s);
+      return s;
+    } catch (e) { return crypto.randomUUID(); } // storage blocked → new id per call
   },
   // Rolling: newest `use_limit` distinct devices that activated the code.
   async _active(code, use_limit) {
@@ -108,8 +109,10 @@ window.db = {
   // Log event to usage table (fire-and-forget).
   logUsage(o = {}) {
     if (!SUPABASE || SUPABASE.url.includes('YOUR-')) return Promise.resolve();
+    let fingerprint = null, session_id = null;
+    try { fingerprint = db.fp(); session_id = db.sid(); } catch (e) {} // storage blocked → still log the row
     const body = {
-      fingerprint: db.fp(), session_id: db.sid(),
+      fingerprint, session_id,
       code_id: o.code || null, book: o.book || null, page: o.page ?? null, event: o.event || ''
     };
     return fetch(SUPABASE.url + '/rest/v1/usage', { method: 'POST', headers: db.h(), body: JSON.stringify(body) }).catch(() => {});
