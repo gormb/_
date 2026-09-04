@@ -2,12 +2,9 @@ import glob
 import os
 from PIL import Image, ImageOps
 
-qr_files = sorted(glob.glob('*qr.png'))
+qr_files = sorted(glob.glob('*.qr.png'))
 
 for filepath in qr_files:
-    if filepath.endswith('.qr1.png'):
-        continue
-
     img = Image.open(filepath).convert('L')
     bw = img.point(lambda p: 255 if p > 128 else 0)
 
@@ -39,8 +36,8 @@ for filepath in qr_files:
     # Downsample cleanly with nearest-neighbor
     tiny = cropped.resize((grid_w, grid_h), Image.NEAREST).convert('1')
 
-    # Save output as *.qr1.png
-    out_path = f"{filepath[:-4]}.qr1.png"
+    # Save output as <base>.qr1.png (input is <base>.qr.png)
+    out_path = f"{filepath[:-7]}.qr1.png"
     tiny.save(out_path, optimize=True)
 
     file_size = os.path.getsize(out_path)
