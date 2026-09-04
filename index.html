@@ -2,7 +2,7 @@
 const qr=async(x,I=1)=>{window.QRCodeStyling||await new Promise((r,j)=>(s=document.createElement("script"),s.src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js",s.onload=r,s.onerror=j,document.head.appendChild(s)));const o={width:300,height:300,data:"https://gormb.github.io/_?"+x,imageOptions:{margin:0}};if(I){const b=x.endsWith('qr')?x.slice(0,-2):x;if(await new Promise(res=>{const i=new Image();i.onload=()=>res(1);i.onerror=()=>res(0);i.src='i/'+b+'.png'}))o.image='i/'+b+'.png'}return URL.createObjectURL(await new window.QRCodeStyling(o).getRawData('png'))}
 ,go=(p,k,u)=>{p.delete(k);
   s=p.toString();
-  window.location.replace(u+(s?(u.includes("?")?"&":"?")+s:""))
+  window.location.replace(u+(s?(u.includes("?")?"&":"?")+s:"")+(location.hash&&!u.includes('#')?location.hash:''))
 }
 ,rh={apikey:SUPABASE.publishableKey,'Authorization':'Bearer '+SUPABASE.publishableKey}
 ,dbL=async k=>{if(!k||SUPABASE.url.includes('YOUR-'))return null;const g=async id=>{try{return(await(await fetch(SUPABASE.url+"/rest/v1/redir?select=url&id=eq."+encodeURIComponent(id),{headers:rh})).json())[0]?.url}catch(e){return null}};return(await g(k))||(await g(k+'qr'))}
