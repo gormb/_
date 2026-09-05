@@ -1,4 +1,5 @@
 import glob
+import io
 import os
 from PIL import Image, ImageOps
 
@@ -38,7 +39,13 @@ for filepath in qr_files:
 
     # Save output as <base>.qr1.png (input is <base>.qr.png)
     out_path = f"{filepath[:-7]}.qr1.png"
-    tiny.save(out_path, optimize=True)
+    buf = io.BytesIO()
+    tiny.save(buf, format='PNG', optimize=True)
+    data = buf.getvalue()
 
-    file_size = os.path.getsize(out_path)
-    print(f"{filepath:15s} -> {out_path:19s} | {grid_w}x{grid_h}px ({file_size} B)")
+    if os.path.exists(out_path) and open(out_path, 'rb').read() == data:
+        print(f"same   {out_path:19s} ({grid_w}x{grid_h}px) - skipped")
+        continue
+
+    open(out_path, 'wb').write(data)
+    print(f"{filepath:15s} -> {out_path:19s} | {grid_w}x{grid_h}px ({len(data)} B)")
