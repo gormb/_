@@ -16,5 +16,7 @@ for f in sorted(glob.glob('*.qr.png')):
     t=im.resize((N,N),Image.NEAREST).convert('1')
     o=f[:-7]+'.qr1.png'
     q=io.BytesIO();t.save(q,format='PNG',optimize=True);d=q.getvalue()
-    if os.path.exists(o) and open(o,'rb').read()==d:print(f'same {o} {N}x{N}px');continue
+    if os.path.exists(o) and open(o,'rb').read()==d:
+        #print(f'same {o} {N}x{N}px')
+        continue
     open(o,'wb').write(d);print(f'{f} -> {o} {N}x{N}px {len(d)} B')
