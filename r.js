@@ -4,7 +4,7 @@ const qr=async(x,I=1)=>{window.QRCodeStyling||await new Promise((r,j)=>(s=docume
   window.location.replace(u+(s?(u.includes("?")?"&":"?")+s:"")+(location.hash&&!u.includes('#')?location.hash:''))
 }
 ,rh={apikey:SUPABASE.publishableKey,'Authorization':'Bearer '+SUPABASE.publishableKey}
-,dbL=async k=>{if(!k||SUPABASE.url.includes('YOUR-'))return null;const g=async id=>{try{return(await(await fetch(SUPABASE.url+"/rest/v1/redir?select=url&id=eq."+encodeURIComponent(id),{headers:rh})).json())[0]?.url}catch(e){return null}};return(await g(k))||(await g(k+'qr'))||(await g(k+'qra'))}
+,dbL=async k=>{if(!k||SUPABASE.url.includes('YOUR-'))return null;const g=async id=>{try{return(await(await fetch(SUPABASE.url+"/rest/v1/redir?select=url&id=eq."+encodeURIComponent(id),{headers:rh})).json())[0]?.url}catch(e){return null}};const b=k.endsWith('qr')?k.slice(0,-2):k.endsWith('qra')?k.slice(0,-3):'';const ids=[k,k+'qr',k+'qra'];if(b)ids.push(b,b+'qr',b+'qra');for(const id of ids){const u=await g(id);if(u)return u}return null}
 ,dbA=async()=>{if(SUPABASE.url.includes('YOUR-'))return[];const r=await fetch(SUPABASE.url+"/rest/v1/redir?select=id,\"desc\",\"group\",sort&order=sort.asc,id.asc",{headers:rh});if(!r.ok)throw new Error(r.status);const a=await r.json();if(!Array.isArray(a))throw new Error('bad');return a}
 ,phT="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
 //,phW="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4//8/AAX+Av4N70a4AAAAAElFTkSuQmCC"
