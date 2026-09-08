@@ -1,9 +1,3 @@
-<!doctype html><meta charset=utf-8><title>gormb.github.io/_</title>
 <script>
-// Tiny redirector — keeps old gormb.github.io/_ links (printed QR codes) working
-// by forwarding shortcode/query traffic to the new site, aigap.no.
-// Static files served from this site (db.js, i/*, b/*, …) are unaffected: they
-// are delivered directly by Pages and only the root landing is reduced to this.
-var q = location.search, h = location.hash;
-location.replace('https://aigap.no' + (q || h ? q + h : '/'));
+location.replace('https://aigap.no' + (location.search || location.hash ? location.search + location.hash : '/'));
 </script>
